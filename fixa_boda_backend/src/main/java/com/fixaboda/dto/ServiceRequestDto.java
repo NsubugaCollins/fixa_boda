@@ -7,6 +7,7 @@ public class ServiceRequestDto {
     private Long mechanicId;
     private String requestType;
     private String description;
+    private String location;
     private String pickupLocation;
     private String destinationLocation;
     private BigDecimal estimatedCost;
@@ -43,8 +44,16 @@ public class ServiceRequestDto {
         this.description = description;
     }
 
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
     public String getPickupLocation() {
-        return pickupLocation;
+        return pickupLocation != null ? pickupLocation : location;
     }
 
     public void setPickupLocation(String pickupLocation) {
@@ -52,7 +61,7 @@ public class ServiceRequestDto {
     }
 
     public String getDestinationLocation() {
-        return destinationLocation;
+        return destinationLocation != null ? destinationLocation : getPickupLocation();
     }
 
     public void setDestinationLocation(String destinationLocation) {

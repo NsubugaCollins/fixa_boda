@@ -27,6 +27,21 @@ public class MechanicProfile {
     @Column(nullable = false)
     private boolean available = true;
 
+    @Column(nullable = false)
+    private boolean verified = true;
+
+    @Column(nullable = false)
+    private double serviceRadiusKm = 6.0;
+
+    @Column(nullable = false)
+    private double latitude = 0.0;
+
+    @Column(nullable = false)
+    private double longitude = 0.0;
+
+    @Column(nullable = false)
+    private int completedJobs = 0;
+
     public MechanicProfile() {
     }
 
@@ -84,5 +99,45 @@ public class MechanicProfile {
 
     public void setAvailable(boolean available) {
         this.available = available;
+    }
+
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    public double getServiceRadiusKm() {
+        return serviceRadiusKm;
+    }
+
+    public void setServiceRadiusKm(double serviceRadiusKm) {
+        this.serviceRadiusKm = serviceRadiusKm;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
+
+    public int getCompletedJobs() {
+        return completedJobs;
+    }
+
+    public void setCompletedJobs(int completedJobs) {
+        this.completedJobs = completedJobs;
     }
 }

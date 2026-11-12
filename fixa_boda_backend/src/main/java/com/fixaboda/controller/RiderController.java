@@ -28,4 +28,14 @@ public class RiderController {
     public ResponseEntity<List<ServiceRequest>> getRequests(@PathVariable Long riderId) {
         return ResponseEntity.ok(serviceRequestService.getRequestsByRider(riderId));
     }
+
+    @GetMapping("/requests/{riderId}/live")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getLiveRequests(@PathVariable Long riderId) {
+        return ResponseEntity.ok(
+                serviceRequestService.getRequestsByRider(riderId).stream()
+                        .filter(request -> request.getMechanic() != null)
+                        .map(request -> serviceRequestService.getLiveRouteSnapshot(request.getId()))
+                        .toList()
+        );
+    }
 }

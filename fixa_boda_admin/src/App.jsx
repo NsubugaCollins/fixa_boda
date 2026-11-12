@@ -17,6 +17,15 @@ function App() {
   const [riders, setRiders] = useState([])
   const [mechanics, setMechanics] = useState([])
   const [serviceRequests, setServiceRequests] = useState([])
+  const [dashboardSummary, setDashboardSummary] = useState({
+    riders: 0,
+    mechanics: 0,
+    verifiedMechanics: 0,
+    availableMechanics: 0,
+    openRequests: 0,
+    acceptedRequests: 0,
+    completedRequests: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -27,10 +36,14 @@ function App() {
     async function load() {
       setLoading(true)
       try {
-        const data = await adminApi.getUsers()
+        const [users, summary] = await Promise.all([
+          adminApi.getUsers(),
+          adminApi.getDashboardSummary(),
+        ])
         if (!cancelled) {
-          setRiders(data.filter(u => u.role === 'RIDER'))
-          setMechanics(data.filter(u => u.role === 'MECHANIC'))
+          setRiders(users.filter(u => u.role === 'RIDER'))
+          setMechanics(users.filter(u => u.role === 'MECHANIC'))
+          setDashboardSummary(summary)
           setServiceRequests([])
         }
       } catch (err) {
@@ -71,6 +84,85 @@ function App() {
             <br />
             Make sure the Spring Boot backend is running on http://localhost:8081
           </div>
+        </article>
+      )
+    }
+
+    if (activeTab === 'Overview') {
+      return (
+        <article className="panel large-panel">
+          <div className="panel-header">
+            <div>
+              <p className="eyebrow">Operations</p>
+              <h3>Live network snapshot</h3>
+            </div>
+          </div>
+
+          <div className="mechanic-list">
+            <div className="mechanic-item">
+              <div className="avatar">R</div>
+              <div className="mechanic-copy">
+                <strong>Riders</strong>
+                <span>Active rider accounts</span>
+              </div>
+              <div className="mechanic-meta">
+                <strong>{dashboardSummary.riders}</strong>
+              </div>
+            </div>
+            <div className="mechanic-item">
+              <div className="avatar">M</div>
+              <div className="mechanic-copy">
+                <strong>Mechanics</strong>
+                <span>Registered service partners</span>
+              </div>
+              <div className="mechanic-meta">
+                <strong>{dashboardSummary.mechanics}</strong>
+              </div>
+            </div>
+            <div className="mechanic-item">
+              <div className="avatar">V</div>
+              <div className="mechanic-copy">
+                <strong>Verified</strong>
+                <span>Mechanics cleared for dispatch</span>
+              </div>
+              <div className="mechanic-meta">
+                <strong>{dashboardSummary.verifiedMechanics}</strong>
+              </div>
+            </div>
+            <div className="mechanic-item">
+              <div className="avatar">A</div>
+              <div className="mechanic-copy">
+                <strong>Available</strong>
+                <span>On duty nearby mechanics</span>
+              </div>
+              <div className="mechanic-meta">
+                <strong>{dashboardSummary.availableMechanics}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel-header" style={{ marginTop: 20 }}>
+            <div>
+              <p className="eyebrow">Bookings</p>
+              <h3>Service status</h3>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Open requests</th>
+                <th>Accepted</th>
+                <th>Completed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{dashboardSummary.openRequests}</td>
+                <td>{dashboardSummary.acceptedRequests}</td>
+                <td>{dashboardSummary.completedRequests}</td>
+              </tr>
+            </tbody>
+          </table>
         </article>
       )
     }

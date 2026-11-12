@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
@@ -27,11 +28,84 @@ class MechanicDashboardScreen extends StatefulWidget {
 class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
   List<Map<String, dynamic>> _requests = [];
   bool _loading = false;
+  bool _available = true;
+  Timer? _locationTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchRequests();
+    _startLiveLocationTracking();
+  }
+
+  @override
+  void dispose() {
+    _locationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _startLiveLocationTracking() async {
+    if (widget.userId == null) return;
+
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location services are off. Turn them on to share your live GPS.')),
+        );
+      }
+      return;
+    }
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location permission was not granted, so live driver updates are disabled.')),
+        );
+      }
+      return;
+    }
+
+    await _pushLocationUpdate();
+    _locationTimer?.cancel();
+    _locationTimer = Timer.periodic(const Duration(seconds: 20), (_) async {
+      if (!mounted || !_available) return;
+      await _pushLocationUpdate(silent: true);
+    });
+  }
+
+  Future<void> _pushLocationUpdate({bool silent = false}) async {
+    if (widget.userId == null) return;
+
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+      await widget.api.updateMechanicLocation(
+        mechanicId: widget.userId!,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      if (mounted && !silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Live GPS is active.')),
+        );
+      }
+    } catch (e) {
+      if (mounted && !silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to share live GPS: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _fetchRequests() async {
@@ -59,7 +133,7 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
         requestId: requestId,
         mechanicId: widget.userId!,
       );
-      _fetchRequests();
+      await _fetchRequests();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -69,6 +143,77 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _confirmRequest(String requestId) async {
+    setState(() => _loading = true);
+    try {
+      await widget.api.confirmRequest(requestId);
+      await _fetchRequests();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to confirm request: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _toggleAvailability(
+    bool value, {
+    ScaffoldMessengerState? messenger,
+  }) async {
+    if (widget.userId == null) return;
+    try {
+      await widget.api.updateMechanicAvailability(
+        mechanicId: widget.userId!,
+        available: value,
+      );
+      if (mounted) {
+        setState(() => _available = value);
+        if (value) {
+          await _startLiveLocationTracking();
+        } else {
+          _locationTimer?.cancel();
+        }
+      }
+    } catch (e) {
+      if (mounted && messenger != null) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to update availability: $e')),
+        );
+      }
+    }
+  }
+
+  List<_StatusStep> _statusSteps(String? rawStatus) {
+    const labels = [
+      'Requested',
+      'Accepted',
+      'Confirmed',
+      'In progress',
+      'Completed',
+    ];
+
+    final order = [
+      'PENDING',
+      'ACCEPTED',
+      'CONFIRMED',
+      'IN_PROGRESS',
+      'COMPLETED',
+    ];
+    final activeIndex = order.indexOf((rawStatus ?? 'PENDING').toUpperCase());
+
+    return List.generate(labels.length, (index) {
+      final active = index <= (activeIndex >= 0 ? activeIndex : 0);
+      return _StatusStep(
+        label: labels[index],
+        active: active,
+        current: index == (activeIndex >= 0 ? activeIndex : 0),
+      );
+    });
   }
 
   @override
@@ -149,6 +294,21 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
                         color: AppColors.ink,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: const [
+                        Icon(Icons.verified_rounded, size: 16, color: AppColors.green),
+                        SizedBox(width: 6),
+                        Text(
+                          'Verified mechanic',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.green,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -170,6 +330,47 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.paleGreen,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Available for nearby bookings',
+                              style: TextStyle(
+                                color: AppColors.green,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          Switch(
+                            value: _available,
+                            activeThumbColor: AppColors.green,
+                            onChanged: (value) async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              await _toggleAvailability(
+                                value,
+                                messenger: messenger,
+                              );
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    value ? 'You are now available' : 'You are now offline',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -194,6 +395,13 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
                       : Column(
                           children: _requests.map((req) {
                             final requestId = req['id']?.toString() ?? '';
+                            final requestStatus = (req['status'] ?? 'PENDING').toString();
+                            final normalizedStatus = requestStatus.toUpperCase();
+                            final isAccepted = normalizedStatus == 'ACCEPTED';
+                            final isConfirmed = normalizedStatus == 'CONFIRMED';
+                            final isCompleted = normalizedStatus == 'COMPLETED';
+                            final steps = _statusSteps(requestStatus);
+
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(14),
@@ -247,19 +455,59 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
                                           vertical: 6,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppColors.orangeLight,
+                                          color: isCompleted
+                                              ? AppColors.paleGreen
+                                              : AppColors.orangeLight,
                                           borderRadius: BorderRadius.circular(999),
                                         ),
                                         child: Text(
-                                          'UGX 20,000',
-                                          style: const TextStyle(
-                                            color: AppColors.orange,
+                                          normalizedStatus,
+                                          style: TextStyle(
+                                            color: isCompleted ? AppColors.green : AppColors.orange,
                                             fontWeight: FontWeight.w700,
                                             fontSize: 11,
                                           ),
                                         ),
                                       ),
                                     ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: steps.asMap().entries.map((entry) {
+                                      final index = entry.key;
+                                      final step = entry.value;
+                                      return Expanded(
+                                        child: Container(
+                                          margin: EdgeInsets.only(
+                                            right: index < steps.length - 1 ? 6 : 0,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                            horizontal: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: step.active
+                                                ? AppColors.paleGreen
+                                                : AppColors.background,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: step.active
+                                                  ? AppColors.green
+                                                  : AppColors.border,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            step.label,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700,
+                                              color: step.active ? AppColors.green : AppColors.muted,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
                                   ),
                                   const SizedBox(height: 12),
                                   Row(
@@ -270,29 +518,41 @@ class _MechanicDashboardScreenState extends State<MechanicDashboardScreen> {
                                         color: AppColors.muted,
                                       ),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        '6 min away',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.muted,
+                                      Expanded(
+                                        child: Text(
+                                          req['pickupLocation'] ?? 'Nearby pick-up',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.muted,
+                                          ),
                                         ),
                                       ),
-                                      const Spacer(),
+                                      const SizedBox(width: 8),
                                       SizedBox(
                                         height: 32,
                                         child: ElevatedButton(
                                           onPressed: _loading
                                               ? null
-                                              : () => _acceptRequest(requestId),
+                                              : () {
+                                                  if (isAccepted || isConfirmed) {
+                                                    _confirmRequest(requestId);
+                                                  } else {
+                                                    _acceptRequest(requestId);
+                                                  }
+                                                },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.orange,
+                                            backgroundColor: isConfirmed
+                                                ? AppColors.green
+                                                : AppColors.orange,
                                             foregroundColor: Colors.white,
                                             padding: const EdgeInsets.symmetric(horizontal: 16),
                                             shape: RoundedRectangleBorder(
                                               borderRadius: BorderRadius.circular(10),
                                             ),
                                           ),
-                                          child: const Text('Accept'),
+                                          child: Text(
+                                            isAccepted ? 'Confirm' : isConfirmed ? 'Confirmed' : 'Accept',
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -394,6 +654,18 @@ class _ActionChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StatusStep {
+  const _StatusStep({
+    required this.label,
+    required this.active,
+    required this.current,
+  });
+
+  final String label;
+  final bool active;
+  final bool current;
 }
 
 class _MetricTile extends StatelessWidget {

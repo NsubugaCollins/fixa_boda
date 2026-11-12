@@ -18,6 +18,7 @@ async function request(path, options = {}) {
 export const adminApi = {
   getUsers: () => request('/admin/users'),
   getUsersByRole: (role) => request(`/admin/users/role/${role}`),
+  getDashboardSummary: () => request('/admin/dashboard/summary'),
   updateUserStatus: (id, status) =>
     request(`/admin/users/${id}/status`, {
       method: 'PUT',

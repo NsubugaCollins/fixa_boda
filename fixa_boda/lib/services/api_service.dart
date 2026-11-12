@@ -73,17 +73,28 @@ class ApiService {
     required String riderId,
     required String requestType,
     required String description,
-    required String location,
+    required String pickupLocation,
+    String? destinationLocation,
+    String? mechanicId,
+    String? estimatedCost,
   }) async {
+    final payload = <String, dynamic>{
+      'riderId': riderId,
+      'requestType': requestType,
+      'description': description,
+      'pickupLocation': pickupLocation,
+      'destinationLocation': destinationLocation ?? pickupLocation,
+      'estimatedCost': estimatedCost ?? '20000',
+    };
+
+    if (mechanicId != null && mechanicId.isNotEmpty) {
+      payload['mechanicId'] = mechanicId;
+    }
+
     final response = await _client.post(
       Uri.parse('$baseUrl/rider/requests'),
       headers: _headers(),
-      body: jsonEncode({
-        'riderId': riderId,
-        'requestType': requestType,
-        'description': description,
-        'location': location,
-      }),
+      body: jsonEncode(payload),
     );
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return await _decode(response);
@@ -149,6 +160,95 @@ class ApiService {
       return await _decode(response);
     }
     throw Exception('Update status failed: ${response.statusCode} ${await _decode(response)}');
+  }
+
+  Future<Map<String, dynamic>> confirmRequest(String requestId) async {
+    return updateRequestStatus(requestId: requestId, status: 'CONFIRMED');
+  }
+
+  Future<Map<String, dynamic>> updateMechanicAvailability({
+    required String mechanicId,
+    required bool available,
+  }) async {
+    final response = await _client.put(
+      Uri.parse('$baseUrl/mechanic/$mechanicId/availability?available=$available'),
+      headers: _headers(),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return await _decode(response);
+    }
+    throw Exception('Update availability failed: ${response.statusCode} ${await _decode(response)}');
+  }
+
+  Future<List<Map<String, dynamic>>> getNearbyMechanics({
+    double? latitude,
+    double? longitude,
+  }) async {
+    final queryParams = <String, String>{};
+    if (latitude != null) queryParams['latitude'] = latitude.toString();
+    if (longitude != null) queryParams['longitude'] = longitude.toString();
+
+    final response = await _client.get(
+      Uri.parse('$baseUrl/mechanic/nearby').replace(queryParameters: queryParams),
+      headers: _headers(),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      }
+      if (decoded is Map<String, dynamic>) {
+        final list = decoded['content'] ?? decoded;
+        if (list is List) {
+          return list
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList();
+        }
+      }
+      return [];
+    }
+    throw Exception('Get nearby mechanics failed: ${response.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> updateMechanicLocation({
+    required String mechanicId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await _client.put(
+      Uri.parse('$baseUrl/mechanic/$mechanicId/location')
+          .replace(queryParameters: {
+            'latitude': latitude.toString(),
+            'longitude': longitude.toString(),
+          }),
+      headers: _headers(),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return await _decode(response);
+    }
+    throw Exception('Update mechanic location failed: ${response.statusCode} ${await _decode(response)}');
+  }
+
+  Future<List<Map<String, dynamic>>> getLiveRouteForRider(String riderId) async {
+    final response = await _client.get(
+      Uri.parse('$baseUrl/rider/requests/$riderId/live'),
+      headers: _headers(),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = jsonDecode(response.body);
+      if (body is List) {
+        return body
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+      }
+      return [];
+    }
+    throw Exception('Get live rider route failed: ${response.statusCode}');
   }
 
   Future<List<Map<String, dynamic>>> getAllUsers() async {
