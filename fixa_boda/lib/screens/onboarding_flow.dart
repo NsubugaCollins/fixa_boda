@@ -79,14 +79,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           data: data,
           onBack: () => goTo(0),
           register: _handleRegister,
-          onSubmit: () => goTo(1),
+          // The verification-code step is intentionally disabled for now.
+          // After creating an account, users are sent straight to the sign-in screen.
+          onSubmit: () => goTo(6),
           onSignIn: () => goTo(6),
         );
       case 1:
-        return VerifyEmailCodeScreen(
-          onBack: () => goTo(0),
-          onSubmit: () => goTo(2),
-          email: data.email.isNotEmpty ? data.email : 'david.somakula@gmail.com',
+        return WelcomeBackScreen(
+          api: widget.api,
+          onCreateAccount: () => goTo(0),
+          onSignIn: _handleSignIn,
         );
       case 2:
         return RoleSelectionScreen(
@@ -126,7 +128,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           data: data,
           onBack: () => goTo(0),
           register: _handleRegister,
-          onSubmit: () => goTo(1),
+          onSubmit: () => goTo(6),
           onSignIn: () => goTo(6),
         );
     }

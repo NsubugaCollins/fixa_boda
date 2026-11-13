@@ -116,7 +116,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    "We'll email you a 6-digit code to confirm your account.",
+                    'Create your account and then sign in to continue.',
                     style: TextStyle(
                       color: AppColors.muted,
                       fontSize: 13,
@@ -206,7 +206,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: PrimaryButton(
-                      label: 'Send verification code',
+                      label: 'Create account',
                       icon: Icons.arrow_forward_rounded,
                       onPressed: _submitting ? null : _handleSubmit,
                     ),
