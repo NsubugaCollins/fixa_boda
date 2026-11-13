@@ -38,6 +38,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   bool _submitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.data.role == null) {
+      widget.data.role = UserRole.rider;
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
@@ -52,12 +60,13 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     widget.data.phone = _phoneController.text.trim();
     widget.data.password = _passwordController.text.trim();
 
-    if (widget.data.fullName.isEmpty ||
+    if (widget.data.role == null ||
+        widget.data.fullName.isEmpty ||
         widget.data.email.isEmpty ||
         widget.data.phone.isEmpty ||
         widget.data.password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields.')),
+        const SnackBar(content: Text('Please select a role and fill in all fields.')),
       );
       return;
     }
@@ -128,6 +137,27 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
+                  const _FieldLabel('I am joining as'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _RoleSelector(
+                          label: 'Rider',
+                          selected: widget.data.role == UserRole.rider,
+                          onTap: () => setState(() => widget.data.role = UserRole.rider),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _RoleSelector(
+                          label: 'Mechanic',
+                          selected: widget.data.role == UserRole.mechanic,
+                          onTap: () => setState(() => widget.data.role = UserRole.mechanic),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 18),
                   const _FieldLabel('Full name'),
                   const SizedBox(height: 8),
@@ -196,6 +226,47 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 ),
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleSelector extends StatelessWidget {
+  const _RoleSelector({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.orangeLight : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.orange : AppColors.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? AppColors.orange : AppColors.ink,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
           ),
         ),
       ),

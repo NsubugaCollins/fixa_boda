@@ -45,9 +45,13 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   Future<void> _handleRegister() async {
-    if (data.fullName.isEmpty || data.email.isEmpty || data.phone.isEmpty || data.password.isEmpty) {
+    if (data.role == null ||
+        data.fullName.isEmpty ||
+        data.email.isEmpty ||
+        data.phone.isEmpty ||
+        data.password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields.')),
+        const SnackBar(content: Text('Please select a role and fill in all fields.')),
       );
       return;
     }
