@@ -32,14 +32,23 @@ class ApiService {
     required String email,
     required String phone,
     required String role,
+    required String password,
   }) async {
+    final nameParts = fullName.trim().split(RegExp(r'\s+'));
+    final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+    final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+    final username = email.trim().split('@').first;
+
     final response = await _client.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: _headers(),
       body: jsonEncode({
-        'fullName': fullName,
+        'firstName': firstName,
+        'lastName': lastName,
+        'username': username,
         'email': email,
-        'phone': phone,
+        'password': password,
+        'phoneNumber': phone,
         'role': role,
       }),
     );

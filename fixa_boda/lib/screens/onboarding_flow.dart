@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../models/onboarding_data.dart';
 import '../services/api_service.dart';
 import 'create_account_screen.dart';
-import 'role_selection_screen.dart';
 import 'verification_screen.dart';
 
 class OnboardingFlow extends StatefulWidget {
@@ -26,6 +25,7 @@ class OnboardingFlow extends StatefulWidget {
     required String email,
     required String phone,
     required String role,
+    required String password,
   }) register;
   final Future<void> Function({required String email, required String password}) login;
 
@@ -45,7 +45,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   Future<void> _handleRegister() async {
-    if (data.fullName.isEmpty || data.email.isEmpty || data.phone.isEmpty) {
+    if (data.fullName.isEmpty || data.email.isEmpty || data.phone.isEmpty || data.password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields.')),
       );
@@ -57,11 +57,15 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       email: data.email,
       phone: data.phone,
       role: role,
+      password: data.password,
     );
   }
 
   Future<void> _handleSignIn({required String email, required String password}) async {
     await widget.login(email: email, password: password);
+    if (mounted && widget.onComplete != null) {
+      widget.onComplete!();
+    }
   }
 
   @override
@@ -77,46 +81,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         return CreateAccountScreen(
           api: widget.api,
           data: data,
-          onBack: () => goTo(0),
+          onBack: () => goTo(1),
           register: _handleRegister,
-          // The verification-code step is intentionally disabled for now.
-          // After creating an account, users are sent straight to the sign-in screen.
-          onSubmit: () => goTo(6),
-          onSignIn: () => goTo(6),
+          onSubmit: () => goTo(1),
+          onSignIn: () => goTo(1),
         );
       case 1:
-        return WelcomeBackScreen(
-          api: widget.api,
-          onCreateAccount: () => goTo(0),
-          onSignIn: _handleSignIn,
-        );
-      case 2:
-        return RoleSelectionScreen(
-          selectedRole: data.role,
-          onRoleChanged: (role) {
-            setState(() {
-              data.role = role;
-            });
-          },
-          onBack: () => goTo(1),
-          onContinue: () => goTo(3),
-        );
-      case 3:
-        return VerificationScreen(
-          api: widget.api,
-          data: data,
-          onBack: () => goTo(2),
-          onSubmit: () => goTo(4),
-        );
-      case 4:
-        return ApplicationSubmittedScreen(
-          onContinue: widget.onComplete ?? () => goTo(5),
-        );
-      case 5:
-        return AllSetScreen(
-          onContinue: widget.onComplete ?? () => goTo(6),
-        );
-      case 6:
         return WelcomeBackScreen(
           api: widget.api,
           onCreateAccount: () => goTo(0),
@@ -126,10 +96,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         return CreateAccountScreen(
           api: widget.api,
           data: data,
-          onBack: () => goTo(0),
+          onBack: () => goTo(1),
           register: _handleRegister,
-          onSubmit: () => goTo(6),
-          onSignIn: () => goTo(6),
+          onSubmit: () => goTo(1),
+          onSignIn: () => goTo(1),
         );
     }
   }

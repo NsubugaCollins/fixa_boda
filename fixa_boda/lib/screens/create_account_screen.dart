@@ -34,6 +34,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _submitting = false;
 
   @override
@@ -41,6 +42,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -48,10 +50,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     widget.data.fullName = _nameController.text.trim();
     widget.data.email = _emailController.text.trim();
     widget.data.phone = _phoneController.text.trim();
+    widget.data.password = _passwordController.text.trim();
 
     if (widget.data.fullName.isEmpty ||
         widget.data.email.isEmpty ||
-        widget.data.phone.isEmpty) {
+        widget.data.phone.isEmpty ||
+        widget.data.password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields.')),
       );
@@ -63,10 +67,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
       widget.data.fullName = _nameController.text.trim();
       widget.data.email = _emailController.text.trim();
       widget.data.phone = _phoneController.text.trim();
+      widget.data.password = _passwordController.text.trim();
 
       if (widget.data.fullName.isEmpty ||
           widget.data.email.isEmpty ||
-          widget.data.phone.isEmpty) {
+          widget.data.phone.isEmpty ||
+          widget.data.password.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please fill in all fields.')),
         );
@@ -88,8 +94,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final emailSelected = widget.data.contactMethod == ContactMethod.email;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -124,32 +128,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1E7E2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _MethodTab(
-                            label: 'Phone',
-                            active: !emailSelected,
-                            onTap: () => setState(() => widget.data.contactMethod = ContactMethod.phone),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _MethodTab(
-                            label: 'Email',
-                            active: emailSelected,
-                            onTap: () => setState(() => widget.data.contactMethod = ContactMethod.email),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 18),
                   const _FieldLabel('Full name'),
                   const SizedBox(height: 8),
@@ -167,6 +145,15 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     prefixIcon: Icons.email_outlined,
                   ),
                   const SizedBox(height: 14),
+                  const _FieldLabel('Password'),
+                  const SizedBox(height: 8),
+                  _TextInput(
+                    controller: _passwordController,
+                    hintText: 'Create a password',
+                    prefixIcon: Icons.lock_outline_rounded,
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 14),
                   const _FieldLabel('Phone number (for calls & payments)'),
                   const SizedBox(height: 8),
                   _TextInput(
@@ -174,33 +161,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     hintText: '+256 701 234 567',
                     prefixIcon: Icons.phone_iphone_outlined,
                     prefixText: 'UG +256 ',
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: AppColors.orange, width: 1.5),
-                          color: Colors.white,
-                        ),
-                        child: const Icon(Icons.check, size: 14, color: AppColors.orange),
-                      ),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'I agree to the FIXABODA Terms of Service and Privacy Policy.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.muted,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                   const SizedBox(height: 18),
                   SizedBox(
@@ -439,12 +399,14 @@ class _TextInput extends StatelessWidget {
     required this.hintText,
     required this.prefixIcon,
     this.prefixText,
+    this.obscureText = false,
   });
 
   final TextEditingController? controller;
   final String hintText;
   final IconData prefixIcon;
   final String? prefixText;
+  final bool obscureText;
 
   @override
   Widget build(BuildContext context) {
@@ -456,6 +418,7 @@ class _TextInput extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
+        obscureText: obscureText,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13),
@@ -468,43 +431,6 @@ class _TextInput extends StatelessWidget {
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        ),
-      ),
-    );
-  }
-}
-
-class _MethodTab extends StatelessWidget {
-  const _MethodTab({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? AppColors.ink : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: active ? Colors.white : AppColors.ink,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ),
       ),
     );

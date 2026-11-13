@@ -16,6 +16,7 @@ class OnboardingData {
   String fullName = '';
   String phone = '';
   String email = '';
+  String password = '';
   String area = 'Wandegeya, Kampala';
 
   bool acceptedTerms = true;

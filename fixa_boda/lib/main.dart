@@ -69,6 +69,7 @@ class _FixabodaAppState extends State<FixabodaApp> {
     required String email,
     required String phone,
     required String role,
+    required String password,
   }) async {
     setState(() => _isLoading = true);
     try {
@@ -77,6 +78,7 @@ class _FixabodaAppState extends State<FixabodaApp> {
         email: email,
         phone: phone,
         role: role,
+        password: password,
       );
       if (mounted) {
         setState(() {
@@ -107,7 +109,7 @@ class _FixabodaAppState extends State<FixabodaApp> {
     setState(() {
       _showWelcome = false;
       _showDashboard = false;
-      _onboardingStartStep = 6;
+      _onboardingStartStep = 1;
     });
   }
 
