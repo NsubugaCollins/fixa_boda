@@ -51,6 +51,7 @@ class _FixabodaAppState extends State<FixabodaApp> {
         setState(() {
           _showWelcome = false;
           _showDashboard = true;
+          _onboardingStartStep = 1;
           _isLoading = false;
         });
       }
@@ -84,6 +85,7 @@ class _FixabodaAppState extends State<FixabodaApp> {
         setState(() {
           _showWelcome = false;
           _showDashboard = false;
+          _onboardingStartStep = 1;
           _isLoading = false;
         });
       }
